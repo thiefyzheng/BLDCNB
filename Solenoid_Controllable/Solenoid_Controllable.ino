@@ -1,30 +1,66 @@
-int frequency = 8; // Frequency in Hz (Adjust as needed)
-const int maxHighTime = 35; // Decreased maximum duration of HIGH signal in milliseconds
+#include <Servo.h>
+
+
+#define MIN_PULSE_LENGTH 1000 // Minimum pulse length in µs
+#define MAX_PULSE_LENGTH 2000 // Maximum pulse length in µs
+
+Servo motA;
+char data;
+
 
 void setup() {
-  pinMode(2, OUTPUT);    // Set pin D2 as an output
-  pinMode(LED_BUILTIN, OUTPUT); // Set the built-in LED as an output
+    Serial.begin(9600);
+    
+    motA.attach(3, MIN_PULSE_LENGTH, MAX_PULSE_LENGTH);
+
+    
+    displayInstructions();
 }
 
 void loop() {
-  // Calculate interval in milliseconds
-  int interval = 1000 / frequency;
+    if (Serial.available()) {
+        data = Serial.read();
+        switch (data) {
+            case 48 : Serial.println("Sending minimum throttle");
+                      motA.writeMicroseconds(MIN_PULSE_LENGTH);
+            break;
 
-  // Calculate highTime (minimum of maxHighTime and calculated interval)
-  int highTime = min(maxHighTime, interval / 2);
+            case 49 : Serial.println("Sending maximum throttle");
+                      motA.writeMicroseconds(MAX_PULSE_LENGTH);
+            break;
 
-  // Calculate lowTime to complete the full cycle
-  int lowTime = interval - highTime;
+            case 50 : Serial.print("Running test in 3");
+                      delay(1000);
+                      Serial.print(" 2");
+                      delay(1000);
+                      Serial.println(" 1...");
+                      delay(1000);
+                      test();
+            break;
+        }
+    }
+}
 
-  if (lowTime < 0) {
-    lowTime = 0; // Ensure lowTime is not negative
-  }
+void test()
+{
+    for (int i = MIN_PULSE_LENGTH; i <= MAX_PULSE_LENGTH; i += 5) {
+        Serial.print("Pulse length = ");
+        Serial.println(i);
+        
+        motA.writeMicroseconds(i);
+        
+        delay(200);
+    }
 
-  digitalWrite(2, HIGH);         // Send a HIGH signal to pin D2
-  digitalWrite(LED_BUILTIN, HIGH); // Turn on the built-in LED
-  delay(highTime);               // Wait for the highTime duration
-  
-  digitalWrite(2, LOW);          // Send a LOW signal to pin D2
-  digitalWrite(LED_BUILTIN, LOW);  // Turn off the built-in LED
-  delay(lowTime);                // Wait for the lowTime duration
+    Serial.println("STOP");
+    motA.writeMicroseconds(MIN_PULSE_LENGTH);
+    
+}
+
+void displayInstructions()
+{  
+    Serial.println("READY - PLEASE SEND INSTRUCTIONS AS FOLLOWING :");
+    Serial.println("\t0 : Send min throttle");
+    Serial.println("\t1 : Send max throttle");
+    Serial.println("\t2 : Run test function\n");
 }
